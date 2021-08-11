@@ -9,6 +9,7 @@
 
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
 
 //-----------------------------------------------------------------------------
 
@@ -17,13 +18,37 @@ public class MyGame extends GamePanel
     // CENTER POSITIONS. Change the big numbers whenever you change the window size.
     int cx = 1900 / 2;
     int cy = 1070 / 2;
+    // Map size
+    int mapWidth = 10, mapHeight = 10;
+	int tileWidth = 100, tileHeight = 100;
         
-	Player player = new Player(cx - (150 / 2), cy - (250 / 2), 100, 250);
+    // Declare Sprites
+	Player player;
 
-        
-        // backgrounds usually have a position of 0,0
-        ImageLayer bg_mountain = new ImageLayer(0, 0, 3, "Mountains.png");
-	
+    // backgrounds usually have a position of 0,0
+    ImageLayer bg_mountain;
+    Image image =  Toolkit.getDefaultToolkit().getImage("./image/Death-hero01_000.png");
+    
+    // Declare Tilesets
+    Tileset autumn_tiles;
+    
+    // Declare Level layouts, as Tile[] data structures
+    ArrayList<Tile[]> levels;
+    
+    int[] level1Layout = new int[] {
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+    		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+    		
+    };
+
 	//Bullet bullet  = new Bullet(-1000, 0, 0);
 		
     //-------------------------------------------------------------------------
@@ -31,31 +56,68 @@ public class MyGame extends GamePanel
     @Override
     public void initialize()
     {
-        //image.getGraphics().setvi;
+    	player = new Player(0, 550, 100, 250);
+    	bg_mountain = new ImageLayer(0, 0, 3, "Mountains.png");
+    	autumn_tiles = new Tileset("tiles/", new String[] {
+        		"Grass",
+        		"GrassLeft",
+        		"GrassMid",
+        		"GrassRight",
+        }, "png");
+    	levels = new ArrayList<>();
+    	levels.add(new Tile[mapHeight * mapWidth]); // Added a placeholder for title screen
+    	levels.add(new Tile[mapHeight * mapWidth]);
+    	
         Camera.intialize((int)player.px, (int)player.py);
+        
+        LoadLevel(1);
     }
+    
+    public void LoadLevel(int currentLevel) {
+    	// initialize level layout
+    	if(currentLevel == 1) {
+    		Tile[] level = levels.get(currentLevel);
+    		
+    		for(int y = 0; y < mapHeight; y++) {
+    			for (int x = 0; x < mapWidth; x++) {
+    				int tileIndex = (y * mapWidth) + x;
+    				int tx = x * tileWidth;
+    				int ty = y * tileWidth;
+    				int layout_cell = level1Layout[tileIndex = (y * mapWidth) + x];
+    				
+    	    		level[tileIndex] = new Tile(tx, ty, tileWidth, tileHeight, autumn_tiles, layout_cell);
+    			}
+    		}
+    	}
+    }
+   
+
     
     //-------------------------------------------------------------------------
     //   The boolean variables reflecting the keyboard state are queried and
     //   user controlled entities are updated accordingly
     //-------------------------------------------------------------------------
-   
-  
+    
     public void respond_To_User_Input()
     {	
      	//if(pressing[UP])  tank.moveForward(5);
     	//if(pressing[DN])  tank.moveBackward(3);
     	//if(pressing[LT])  player.moveLeft(3);
     	//if(pressing[RT])  player.moveRight(3);
-        player.idle();
+    	
     	if(pressing[LT]) {
             player.moveLeft(3);
-            Camera.moveLeft(3);
         }
     	if(pressing[RT])  {
             player.moveRight(3);
-            Camera.moveRight(3);
         }
+    	if(pressing[UP])  {
+            player.jump(5);
+        }
+    	if(pressing[DN])  {
+            player.moveDown(3);
+        }
+    	player.handlePhysics();
     	
     	//if(pressing[SPACE])  player.shoot(bullet);
     	
@@ -75,6 +137,29 @@ public class MyGame extends GamePanel
 
     public void resolve_Collisions()
     {
+    	int px = (int)player.px;
+    	int py = (int)player.py;
+    	
+    	Camera.x = px;
+    	Camera.y = py;
+    	
+    	// Lazily check for tile collisions
+    	for(int t = 0; t < levels.get(1).length; t++) {
+    		Tile tile = levels.get(1)[t];
+    		if(player.bottom_overlaps(tile) && tile.index != -1) {
+    			 player.setGrounded();
+    			 px = ((int)(Math.abs(tile.px - player.px)));
+    		}
+    	}
+
+    	//Player bounds
+    	if(player.px <= 0) {
+    		player.px = 0;
+    	}
+    	if (player.px >= mapWidth * tileWidth) {
+    		player.px = (mapWidth * tileWidth);
+    	}
+    	
     	
     }
     
@@ -86,10 +171,21 @@ public class MyGame extends GamePanel
 	{
 		pen.clearRect(0, 0,2560, 1536);
 
-                bg_mountain.draw(pen);
+		// Draw Background stuff
+        bg_mountain.draw(pen);
                 
+        // Draw Tilesets
+        for(int i = 0; i < levels.get(1).length; i++) {
+        	// Draw Every tile from level layout
+        	levels.get(1)[i].draw(pen, true);
+        }
+        
+        // Draw Sprite Stuff
+
+		// Draw Player
 		player.draw(pen);
 		
+		pen.drawImage(image, 0, 0, null);
 		
 		//bullet.draw(pen);
 				

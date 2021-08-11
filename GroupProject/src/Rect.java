@@ -4,8 +4,8 @@ import java.awt.*;
 
 public class Rect
 {
-	double px;
-	double py;
+	public double px;
+	public double py;
 	
 	double vx = 0;
 	double vy = 0;
@@ -36,6 +36,18 @@ public class Rect
 		pen.drawRect((int)px, (int)py, w, h);
 	}
 	
+	public void draw(Graphics pen, boolean isUsingCamera) {
+        if(!isUsingCamera)
+        {
+        	draw(pen);
+        	return;
+        }
+
+		pen.setColor(c);
+		
+		pen.drawRect((int)px, (int)py, w, h);
+	}
+	
 	public void setColor(Color c)
 	{
 		this.c = c;
@@ -56,6 +68,7 @@ public class Rect
 	
 	public void move()
 	{
+		System.out.println("MOVING");
 		px += vx;
 		py += vy;
 		
@@ -101,6 +114,14 @@ public class Rect
 
 	
 	public boolean overlaps(Rect r)
+	{
+		return (r.px + r.w >=   px)  &&
+			   (  px +   w >= r.px)  &&
+			   (  py +   h >= r.py)  &&
+			   (r.py + r.h >=   py);
+	}
+	
+	public boolean bottom_overlaps(Rect r)
 	{
 		return (r.px + r.w >=   px)  &&
 			   (  px +   w >= r.px)  &&

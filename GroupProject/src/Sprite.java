@@ -14,6 +14,7 @@ public class Sprite extends Rect
 	//-------------------------------------------------------------------------
 		
 	Animation[] animation;  // an array of Animation objects to select from
+	boolean animationsLoaded = false;
         
         final int UP    = -1; 
         final int CENTERED  = 0; 
@@ -36,13 +37,21 @@ public class Sprite extends Rect
 
     
 	boolean moving  = false; // the Sprite can be moving or still
-	boolean jumping = false;
 	
 	int motion_horizontal = RIGHT;        // index indicating the type of motion
 	int motion_vertical = CENTERED;        // index indicating the type of motion
 	int animation_state = RIGHT_IDLE;        // index indicating the type of motion
 	
 	boolean alive = true;
+
+	int pushGroundTimer = 0;
+	int jumpForce = 10;
+	int jumpTimer = 0;
+	int jumpMax = 50;
+	boolean isGrounded = true;
+	boolean jumping = false;
+	int jumpHeight;
+	
 	
 	//-------------------------------------------------------------------------
 	// Construct the Sprite
@@ -81,6 +90,22 @@ public class Sprite extends Rect
 	}
         
         // Explicitly loads the player
+	/*public Sprite(int x, int y, int w, int h, String name, String[] pose, int[] count, String filetype, String delimiter, int leadingZeroes, String folder)
+	{
+		super(x, y, w, h, Color.RED);
+		 
+		// Set length of array to match the number of Animations
+		animation = new Animation[pose.length];
+		 
+		// Load the Animations
+		for(int i = 0; i < pose.length; i++)
+		{
+			//animation[i] = new Animation(pose[i] + delimiter + name + "_", count[i], filetype, leadingZeroes);
+            //System.out.println(folder + "/" + pose[i] + delimiter + name + "_" + pose[i] + ", " + count[i]);
+			animation[i] = new Animation(folder + "/" + pose[i] + delimiter + name + "_", count[i], filetype, leadingZeroes);
+		}
+	}*/
+	
 	public Sprite(int x, int y, int w, int h, String name, String[] pose, int[] count, String filetype, String delimiter, int leadingZeroes, String folder)
 	{
 		super(x, y, w, h, Color.RED);
@@ -91,22 +116,89 @@ public class Sprite extends Rect
 		// Load the Animations
 		for(int i = 0; i < pose.length; i++)
 		{
-                        System.out.println(pose[i] + ", " + count[i]);
+            //System.out.println(pose[i] + delimiter + name + "_" + pose[i] + ", " + count[i]);
 			animation[i] = new Animation(pose[i] + delimiter + name + "_", count[i], filetype, leadingZeroes);
-			//animation[i] = new Animation(folder + "/" + pose[i] + delimiter + name + "_", count[i], filetype, leadingZeroes);
 		}
+
+		animation[LEFT_IDLE].setDelay(10);
+		animation[RIGHT_IDLE].setDelay(10);
+		animation[UP_JUMP].setDelay(3);
+		animation[LEFT_WALK].setDelay(2);
+		animation[RIGHT_WALK].setDelay(2);
 	}
+	
 	
 	
 	//-------------------------------------------------------------------------
 	
 	public void jump(int dy)
 	{
-		vy -= dy;         // moving up on the screen corresponds to y going down
+		if(isGrounded) {
+			jumpHeight = dy;
+			
+			moving = true;   // Cause paint method to use Animation's current image
+			
+			animation_state = UP_JUMP;     // Set Animation array index according to this action
+		}
+	}
+	
+	public void handlePhysics() {		
+		if(pushGroundTimer < jumpForce && animation_state == UP_JUMP) {
+			pushGroundTimer++;
+		}
+		else if (pushGroundTimer < jumpForce && pushGroundTimer != 0 && animation_state != UP_JUMP &&  jumpTimer < jumpMax){
+			// Player moved or canceled jump
+			pushGroundTimer = 0;
+			moving = false;
+            animation[UP_JUMP].reset();
+		}
+		else if(pushGroundTimer >= jumpForce && jumpTimer < jumpMax) {
+			isGrounded = false;
+			
+			vy -= jumpHeight;         // moving up on the screen corresponds to y going down
+			
+			jumping = true;
+			
+			jumpTimer++;
+		}
+		else if (pushGroundTimer >= jumpForce && jumpTimer >= jumpMax) {
+			fall(10);
+		}
+		else {
+			// Player should be falling
+			if(jumping && jumpTimer >= jumpMax) {
+				jumping = false;
+				jumpTimer = 0;
+				isGrounded = true;
+				pushGroundTimer = 0;
+	            animation[UP_JUMP].reset();
+				moving = false;
+			}
+	        idle();
+		}
+	}
+	
+	public void fall(int dy) {
+		if(vy < 0) {
+			vy = 0;
+			vy += dy;
+		}
 		
-		moving = true;   // Cause paint method to use Animation's current image
+		move();
 		
-		jumping = true;
+		moving = true;
+		
+		animation_state = DOWN_SLIDE;     // Set Animation array index according to this action
+
+		/*if(animation_state != UP_JUMP) {
+			animation_state = DOWN_SIT;
+            animation[UP_JUMP].reset();
+		}*/
+	}
+	
+	public void setGrounded() {
+		vy = 0;
+		isGrounded = true;
 	}
 	
 	//-------------------------------------------------------------------------
@@ -128,7 +220,10 @@ public class Sprite extends Rect
 		
 		moving = true;
 
-		animation_state = DOWN_SIT;
+		if(animation_state != UP_JUMP) {
+			animation_state = DOWN_SIT;
+            animation[UP_JUMP].reset();
+		}
 	}
 	
 	//-------------------------------------------------------------------------
@@ -137,13 +232,21 @@ public class Sprite extends Rect
 	{
 		//if(!jumping)
 		{
-			vx -= dx;
+			if(motion_horizontal != LEFT || vx >= 0) {
+				vx = 0;
+				vx -= dx;
+			}
+			
+			move();
 			
 			moving = true;
 	
-			motion_horizontal = LEFT;;
-                        
-                        animation_state = LEFT_WALK;
+			motion_horizontal = LEFT;
+
+			if(animation_state != UP_JUMP) {
+                animation_state = LEFT_WALK;
+                animation[UP_JUMP].reset();
+			}
 		}
 	}
 	
@@ -153,12 +256,21 @@ public class Sprite extends Rect
 	{
 		//if(!jumping)
 		{
-			vx += dx;
+			if(motion_horizontal != RIGHT || vx <= 0) {
+				vx = 0;
+				vx += dx;
+			}
+			
+			move();
 			
 			moving = true;
 	
 			motion_horizontal = RIGHT;
-                        animation_state = RIGHT_WALK;
+			
+			if(animation_state != UP_JUMP) {
+				animation_state = RIGHT_WALK;
+                animation[UP_JUMP].reset();
+			}
 		}
 	}
 	
@@ -166,6 +278,9 @@ public class Sprite extends Rect
 
 	public void idle()
 	{
+		if(vx == 0) {
+			moving = false;
+		}
 		//if(!jumping)
                 if(!moving && motion_horizontal == LEFT)
 		{
@@ -197,23 +312,19 @@ public class Sprite extends Rect
             super.draw(pen);
 	    if(alive)
 		{
-                    if(motion_horizontal == LEFT)
-                        pen.drawImage(animation[animation_state].getCurrentImage(),
-                                (int)px + w,
-                                (int)py,
-                                motion_horizontal * animation[animation_state].getCurrentImage().getWidth(null),
-                                animation[animation_state].getCurrentImage().getHeight(null), null);
-                    else if (motion_horizontal == RIGHT){
-                        pen.drawImage(animation[animation_state].getCurrentImage(),
-                                (int)px,
-                                (int)py,
-                                motion_horizontal * animation[animation_state].getCurrentImage().getWidth(null),
-                                animation[animation_state].getCurrentImage().getHeight(null), null);
-                    }
-			
-                        moving = false;
-			
-			if(!jumping)  vx = 0;
+            if(motion_horizontal == LEFT)
+                pen.drawImage(animation[animation_state].getCurrentImage(),
+                        (int)(px) + w,
+                        (int)(py),
+                        (int)(motion_horizontal * animation[animation_state].getCurrentImage().getWidth(null)),
+                        (int)(animation[animation_state].getCurrentImage().getHeight(null)), null);
+            else if (motion_horizontal == RIGHT){
+                pen.drawImage(animation[animation_state].getCurrentImage(),
+                        (int)(px),
+                        (int)(py),
+                        (int)(motion_horizontal * animation[animation_state].getCurrentImage().getWidth(null)),
+                        (int)(animation[animation_state].getCurrentImage().getHeight(null)), null);
+            }
 			
 			//super.draw(pen);
 		}

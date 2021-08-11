@@ -3,6 +3,9 @@
 
 public  class Camera
 {
+	static int initialX;
+	static int initialY;
+	
 	static int x;
 	static int y;
 	
@@ -10,7 +13,18 @@ public  class Camera
 	{
 		Camera.x = x;
 		Camera.y = y;
+		
+		initialX = x;
+		initialY = y;
 	}
+	
+	public static int dx() {
+		return x - initialX;
+	}
+	public static int dy() {
+		return y - initialY;
+	}
+	
 	
 	public static void moveRight(int dx)
 	{

@@ -20,6 +20,7 @@ public class Animation
 	
 	// count down from 10
 	int delay = 10;
+	int delayMax = 10;
 	
 	//-------------------------------------------------------------------------
 	// Construct the Animation object:
@@ -42,9 +43,19 @@ public class Animation
 			image[i] = Toolkit.getDefaultToolkit().getImage("./image/" + name + i + "." + filetype);
 		}
 	}
+	
+	public void setDelay(int value) {
+		delay = value;
+		delayMax = value;
+		System.out.println(delay + ", " + delayMax);
+	}
+	
+	public void reset() {
+		current = 1;
+	}
         
         
-	public Animation(String name, int count, String filetype, int leadingZeroes)
+	/*public Animation(String name, int count, String filetype, int leadingZeroes)
 	{
             String format = "%0" + leadingZeroes + "d";
             // Create array to store images   
@@ -55,6 +66,23 @@ public class Animation
             {
                 String filepath = "./image/" + name + (String.format(format, i + 1)) + "." + filetype;
                 //System.out.println(filepath);
+                    image[i] = Toolkit.getDefaultToolkit().getImage(filepath);
+            }
+	}*/
+	
+
+	public Animation(String name, int count, String filetype, int leadingZeroes)
+	{
+            String format = "%0" + leadingZeroes + "d";
+            // Create array to store images   
+            image = new Image[count];
+            
+            // Load all the images from files into the array
+            for(int i = 0; i < count; i++)
+            {
+            	// NOTE INCREMENT WITH i + 1 IF YOU WANT TO INCLUDE hero01
+                String filepath = "./image/" + name + (String.format(format, i)) + "." + filetype;
+                System.out.println(filepath);
                     image[i] = Toolkit.getDefaultToolkit().getImage(filepath);
             }
 	}
@@ -88,7 +116,7 @@ public class Animation
 			if (current == image.length)  current = 1; 
 				
 			// reset count down
-			delay = 10;
+			delay = delayMax;
 		}
 		
 		// count down
